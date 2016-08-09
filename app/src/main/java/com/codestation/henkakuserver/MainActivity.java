@@ -37,6 +37,7 @@ import android.widget.EditText;
 import android.widget.TextView;
 
 import java.util.Locale;
+import java.lang.reflect.Method;
 
 
 public class MainActivity extends AppCompatActivity {
@@ -70,7 +71,7 @@ public class MainActivity extends AppCompatActivity {
         floatingActionButtonOnOff.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (isConnectedInWifi()) {
+                if (isConnectedInWifi(false)) {
                     if (!isStarted && startAndroidWebServer()) {
                         isStarted = true;
                         textViewMessage.setVisibility(View.VISIBLE);
@@ -134,6 +135,8 @@ public class MainActivity extends AppCompatActivity {
         final IntentFilter filters = new IntentFilter();
         filters.addAction("android.net.wifi.WIFI_STATE_CHANGED");
         filters.addAction("android.net.wifi.STATE_CHANGE");
+        filters.addAction("android.net.wifi.WIFI_AP_STATE_CHANGED");
+
         broadcastReceiverNetworkState = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
@@ -144,9 +147,15 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private String getIpAccess(boolean url) {
-        WifiManager wifiManager = (WifiManager) getSystemService(WIFI_SERVICE);
-        int ipAddress = wifiManager.getConnectionInfo().getIpAddress();
-        final String formatedIpAddress = String.format(Locale.getDefault(), "%d.%d.%d.%d", (ipAddress & 0xff), (ipAddress >> 8 & 0xff), (ipAddress >> 16 & 0xff), (ipAddress >> 24 & 0xff));
+        String formatedIpAddress;
+
+        if (isConnectedInWifi(true)) {
+            WifiManager wifiManager = (WifiManager) getSystemService(WIFI_SERVICE);
+            int ipAddress = wifiManager.getConnectionInfo().getIpAddress();
+            formatedIpAddress = String.format(Locale.getDefault(), "%d.%d.%d.%d", (ipAddress & 0xff), (ipAddress >> 8 & 0xff), (ipAddress >> 16 & 0xff), (ipAddress >> 24 & 0xff));
+        } else {
+            formatedIpAddress = "192.168.43.1";
+        }
 
         if (url) {
             return "http://" + formatedIpAddress + ":";
@@ -160,11 +169,23 @@ public class MainActivity extends AppCompatActivity {
         return (valueEditText.length() > 0) ? Integer.parseInt(valueEditText) : DEFAULT_PORT;
     }
 
-    public boolean isConnectedInWifi() {
+    public boolean isConnectedInWifi(boolean wifiOnly) {
         WifiManager wifiManager = (WifiManager) getSystemService(Context.WIFI_SERVICE);
         NetworkInfo networkInfo = ((ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE)).getActiveNetworkInfo();
-        return networkInfo != null && networkInfo.isAvailable() && networkInfo.isConnected()
+        boolean wifiEnabled = networkInfo != null && networkInfo.isAvailable() && networkInfo.isConnected()
                 && wifiManager.isWifiEnabled() && networkInfo.getTypeName().equals("WIFI");
+
+       if(!wifiOnly && !wifiEnabled) {
+           try {
+               final Method method = wifiManager.getClass().getDeclaredMethod("isWifiApEnabled");
+               method.setAccessible(true);
+               wifiEnabled = (Boolean) method.invoke(wifiManager);
+           } catch(Exception e) {
+               e.printStackTrace();
+           }
+       }
+
+       return wifiEnabled;
     }
     //endregion
 
