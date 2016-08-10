@@ -12,6 +12,10 @@ Usage
 4. Press the button to install HENkaku.
 5. Enjoy.
 
+Supported Android versions
+--------
+4.0.3 and above.
+
 Credits
 --------
 
