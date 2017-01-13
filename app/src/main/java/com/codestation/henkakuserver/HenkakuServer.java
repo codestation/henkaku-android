@@ -20,6 +20,7 @@ import android.content.Context;
 import android.text.TextUtils;
 import android.util.Log;
 import android.util.Pair;
+import android.util.SparseArray;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.ArrayUtils;
@@ -41,7 +42,7 @@ import java.util.Map;
 import fi.iki.elonen.NanoHTTPD;
 
 
-public class HenkakuServer extends NanoHTTPD {
+class HenkakuServer extends NanoHTTPD {
 
     private Context context;
 
@@ -50,12 +51,12 @@ public class HenkakuServer extends NanoHTTPD {
     private byte[] stage1;
     private byte[] stage2;
 
-    public HenkakuServer(Context ctx, int port) {
+    HenkakuServer(Context ctx, int port) {
         super(port);
         context = ctx;
     }
 
-    public synchronized void setIpAddress(String ipAddress) {
+    synchronized void setIpAddress(String ipAddress) {
         currentIpAddress = ipAddress;
     }
 
@@ -85,7 +86,7 @@ public class HenkakuServer extends NanoHTTPD {
         int symtab = reloc_offset + reloc_size;
         int symtab_n = symtab_size / 8;
 
-        Map<Integer, String> reloc_map = new HashMap<>();
+        SparseArray<String> reloc_map = new SparseArray<>();
 
         for (int x = 0; x < symtab_n; ++x) {
             int sym_id = buf.getInt(symtab + 8 * x);
@@ -169,33 +170,6 @@ public class HenkakuServer extends NanoHTTPD {
     }
 
     /**
-     * Convert the exploit to a shellcode in binary format
-     *
-     * @param exploit payload compiled code
-     * @return the shellcode
-     * @throws Exception
-     */
-    private byte[] preprocessToBin(byte[] exploit) throws Exception {
-        Pair<ArrayList<Integer>, List<Byte>> data = preprocessRop(exploit);
-
-        int size = 4 + data.first.size() * 4 + data.second.size();
-        byte[] out = new byte[size + ((-size) & 3)];
-        ByteBuffer buf = ByteBuffer.wrap(out).order(ByteOrder.LITTLE_ENDIAN);
-
-        buf.putInt(data.second.size());
-
-        for (Integer val : data.first) {
-            buf.putInt(val);
-        }
-
-        for (Byte val : data.second) {
-            buf.put(val);
-        }
-
-        return out;
-    }
-
-    /**
      * Finalize the exploit with the addesses from the device
      *
      * @param exploit payload compiled code
@@ -258,10 +232,9 @@ public class HenkakuServer extends NanoHTTPD {
      *
      * @param stage code of the current stage
      * @param url   address to fetch the next stage
-     * @return modified shellcode
      * @throws UnsupportedEncodingException
      */
-    private byte[] writePkgUrl(byte[] stage, String url) throws UnsupportedEncodingException {
+    private void writePkgUrl(byte[] stage, String url) throws UnsupportedEncodingException {
 
         // prepare search pattern
         byte[] pattern = new byte[256];
@@ -273,14 +246,16 @@ public class HenkakuServer extends NanoHTTPD {
         // find url placeholder in loader
         int idx = Collections.indexOfSubList(a, b);
 
-        // convert the url to a byte array
-        byte[] urlArray = url.getBytes("UTF-8");
+        if(idx >= 0) {
+            // convert the url to a byte array
+            byte[] urlArray = url.getBytes("UTF-8");
 
-        // write the url in the loader
-        System.arraycopy(urlArray, 0, stage, idx, urlArray.length);
-        Arrays.fill(stage, idx + urlArray.length, idx + 256, (byte) 0x0);
-
-        return stage;
+            // write the url in the loader
+            System.arraycopy(urlArray, 0, stage, idx, urlArray.length);
+            Arrays.fill(stage, idx + urlArray.length, idx + 256, (byte) 0x0);
+        } else {
+            Log.e("henkaku", "URL filler not found in payload");
+        }
     }
 
     /**
@@ -293,11 +268,11 @@ public class HenkakuServer extends NanoHTTPD {
 
         // reuse the modified loader if the ip address hasn't changed
         if (stage1 == null || lastIpAddress == null || !lastIpAddress.equals(getIpAddress())) {
-            InputStream is = context.getAssets().open("loader.rop.bin");
-            byte[] loader = IOUtils.toByteArray(is);
-            String url = "http://" + getIpAddress() + ":" + getListeningPort() + "/stage2";
-            stage1 = writePkgUrl(loader, url);
             lastIpAddress = getIpAddress();
+            InputStream is = context.getAssets().open("loader.rop.bin");
+            stage1 = IOUtils.toByteArray(is);
+            String url = "http://" + lastIpAddress + ":" + getListeningPort() + "/stage2";
+            writePkgUrl(stage1, url);
         }
 
         return preprocessToJs(stage1);
@@ -314,16 +289,14 @@ public class HenkakuServer extends NanoHTTPD {
 
         // reuse the preprocessed exploit if the ip address hasn't changed
         if (stage2 == null || lastIpAddress == null || !lastIpAddress.equals(getIpAddress())) {
-            InputStream is = context.getAssets().open("exploit.rop.bin");
-            byte[] exploit = IOUtils.toByteArray(is);
-            stage2 = preprocessToBin(exploit);
-            String url = "http://" + getIpAddress() + ":" + getListeningPort() + "/pkg";
-            stage2 = writePkgUrl(stage2, url);
             lastIpAddress = getIpAddress();
+            InputStream is = context.getAssets().open("stage2.bin");
+            stage2 = IOUtils.toByteArray(is);
+            String url = "http://" + lastIpAddress + ":" + getListeningPort() + "/pkg";
+            writePkgUrl(stage2, url);
         }
 
-        byte[] patched = patchExploit(stage2, params);
-        return new ByteArrayInputStream(patched);
+        return new ByteArrayInputStream(patchExploit(stage2, params));
     }
 
     private InputStream getPackageFile(String uri) throws IOException {
@@ -339,7 +312,12 @@ public class HenkakuServer extends NanoHTTPD {
         Response response;
 
         String uri = session.getUri();
+        String query = session.getQueryParameterString();
         Log.d("henkaku", String.format("Request URI: %s", uri));
+
+        if(query != null) {
+            Log.d("henkaku", String.format("Request params: %s", query));
+        }
 
         String agent = session.getHeaders().get("user-agent");
         if (agent != null && !agent.contains("PlayStation Vita 3.60") && (uri.equals("/") || uri.equals("stage1"))) {
