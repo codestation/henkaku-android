@@ -38,6 +38,12 @@
                     android:textSize="20sp"
                     android:textStyle="bold" />
 
+                <LinearLayout
+                    android:focusable="true"
+                    android:focusableInTouchMode="true"
+                    android:layout_width="0px"
+                    android:layout_height="0px"/>
+
                 <EditText
                     android:id="@+id/editTextPort"
                     android:layout_width="60dp"

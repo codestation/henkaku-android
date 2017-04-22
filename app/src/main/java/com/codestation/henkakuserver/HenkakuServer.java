@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright 2016 codestation. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -153,7 +153,7 @@ class HenkakuServer extends NanoHTTPD {
      *
      * @param loader loader compiled code
      * @return the shellcode embedded in js
-     * @throws Exception
+     * @throws Exception throws if fails to preprocess
      */
     private String preprocessToJs(byte[] loader) throws Exception {
         Pair<ArrayList<Integer>, List<Byte>> data = preprocessRop(loader);
@@ -170,69 +170,11 @@ class HenkakuServer extends NanoHTTPD {
     }
 
     /**
-     * Finalize the exploit with the addesses from the device
-     *
-     * @param exploit payload compiled code
-     * @param params  list of addresses from the device
-     * @return patched shellcode
-     * @throws Exception
-     */
-    private byte[] patchExploit(byte[] exploit, Map<String, String> params) throws Exception {
-
-        if (params.size() != 7) {
-            throw new Exception("invalid argument count");
-        }
-
-        ArrayList<Long> args = new ArrayList<>();
-        args.add(0L);
-
-        for (int i = 1; i <= 7; ++i) {
-            String arg = String.format("a%s", i);
-            if (params.containsKey(arg)) {
-                args.add(Long.parseLong(params.get(arg), 16));
-            } else {
-                throw new Exception(String.format("argument %s is missing", arg));
-            }
-        }
-
-        byte[] copy = new byte[exploit.length];
-        System.arraycopy(exploit, 0, copy, 0, exploit.length);
-
-        ByteBuffer buf = ByteBuffer.wrap(copy).order(ByteOrder.LITTLE_ENDIAN);
-        int size_words = buf.getInt(0);
-
-        int dsize = buf.getInt(4 + 0x10);
-        int csize = buf.getInt(4 + 0x20);
-
-        long data_base = args.get(1) + csize;
-
-        for (int i = 1; i < size_words; ++i) {
-            long add = 0;
-            byte x = buf.get(size_words * 4 + 4 + i - 1);
-
-            if (x == 1) {
-                add = data_base;
-            } else if (x != 0) {
-                add = args.get(x);
-            }
-
-            buf.putInt(i * 4, buf.getInt(i * 4) + (int) add);
-        }
-
-        byte[] out = new byte[dsize + csize];
-
-        System.arraycopy(copy, 4 + 0x40, out, csize, dsize);
-        System.arraycopy(copy, 4 + 0x40 + dsize, out, 0, csize);
-
-        return out;
-    }
-
-    /**
      * Write the url to fetch the next stage into the shellcode
      *
      * @param stage code of the current stage
      * @param url   address to fetch the next stage
-     * @throws UnsupportedEncodingException
+     * @throws UnsupportedEncodingException throws if fails to encode the url
      */
     private void writePkgUrl(byte[] stage, String url) throws UnsupportedEncodingException {
 
@@ -262,7 +204,7 @@ class HenkakuServer extends NanoHTTPD {
      * Get the javascript loader payoad
      *
      * @return shellcode (js format)
-     * @throws Exception
+     * @throws Exception thows if fails to read the loader
      */
     private String getLoaderJs() throws Exception {
 
@@ -281,22 +223,21 @@ class HenkakuServer extends NanoHTTPD {
     /**
      * Get the binary exploit payload
      *
-     * @param params list of addresses from the device
      * @return shellcode (binary format)
-     * @throws Exception
+     * @throws Exception thorws if fails to read the stage2
      */
-    private InputStream getExploitBin(Map<String, String> params) throws Exception {
+    private InputStream getExploitBin() throws Exception {
 
         // reuse the preprocessed exploit if the ip address hasn't changed
         if (stage2 == null || lastIpAddress == null || !lastIpAddress.equals(getIpAddress())) {
             lastIpAddress = getIpAddress();
-            InputStream is = context.getAssets().open("stage2.bin");
+            InputStream is = context.getAssets().open("henkaku.bin");
             stage2 = IOUtils.toByteArray(is);
             String url = "http://" + lastIpAddress + ":" + getListeningPort() + "/pkg";
             writePkgUrl(stage2, url);
         }
 
-        return new ByteArrayInputStream(patchExploit(stage2, params));
+        return new ByteArrayInputStream(stage2);
     }
 
     private InputStream getPackageFile(String uri) throws IOException {
@@ -312,16 +253,11 @@ class HenkakuServer extends NanoHTTPD {
         Response response;
 
         String uri = session.getUri();
-        String query = session.getQueryParameterString();
         Log.d("henkaku", String.format("Request URI: %s", uri));
-
-        if(query != null) {
-            Log.d("henkaku", String.format("Request params: %s", query));
-        }
 
         String agent = session.getHeaders().get("user-agent");
         if (agent != null && !agent.contains("PlayStation Vita 3.60") && (uri.equals("/") || uri.equals("stage1"))) {
-            Log.d("henkaku", "Request from non PS Vita");
+            Log.d("henkaku", "Request from non PS Vita, agent: " + agent);
             return newFixedLengthResponse(String.format("<html><body><h2>%s</h2></body></html>", context.getString(R.string.agent_message)));
         }
 
@@ -342,7 +278,7 @@ class HenkakuServer extends NanoHTTPD {
                     response = newFixedLengthResponse(Response.Status.OK, "application/javascript", payload);
                     break;
                 case "/stage2":
-                    InputStream isb = getExploitBin(session.getParms());
+                    InputStream isb = getExploitBin();
                     response = newChunkedResponse(Response.Status.OK, "octet/stream", isb);
                     break;
                 default:

@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright 2016 codestation. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -150,7 +150,7 @@ public class MainActivity extends AppCompatActivity {
         String formatedIpAddress;
 
         if (isConnectedInWifi(true)) {
-            WifiManager wifiManager = (WifiManager) getSystemService(WIFI_SERVICE);
+            WifiManager wifiManager = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
             int ipAddress = wifiManager.getConnectionInfo().getIpAddress();
             formatedIpAddress = String.format(Locale.getDefault(), "%d.%d.%d.%d", (ipAddress & 0xff), (ipAddress >> 8 & 0xff), (ipAddress >> 16 & 0xff), (ipAddress >> 24 & 0xff));
         } else {
@@ -170,7 +170,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public boolean isConnectedInWifi(boolean wifiOnly) {
-        WifiManager wifiManager = (WifiManager) getSystemService(Context.WIFI_SERVICE);
+        WifiManager wifiManager = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
         NetworkInfo networkInfo = ((ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE)).getActiveNetworkInfo();
         boolean wifiEnabled = networkInfo != null && networkInfo.isAvailable() && networkInfo.isConnected()
                 && wifiManager.isWifiEnabled() && networkInfo.getTypeName().equals("WIFI");
