@@ -2,14 +2,14 @@ apply plugin: 'com.android.application'
 
 android {
     compileSdkVersion 25
-    buildToolsVersion "25.0.2"
+    buildToolsVersion "25.0.3"
 
     defaultConfig {
         applicationId "com.codestation.henkakuserver"
         minSdkVersion 10
         targetSdkVersion 25
-        versionCode 9
-        versionName "1.8"
+        versionCode 10
+        versionName "1.9"
     }
     buildTypes {
         release {
@@ -22,8 +22,8 @@ android {
 dependencies {
     compile fileTree(include: ['*.jar'], dir: 'libs')
     compile 'com.android.support:appcompat-v7:25.3.1'
-    compile 'org.nanohttpd:nanohttpd:2.3.0'
+    compile 'org.nanohttpd:nanohttpd:2.3.1'
     compile 'com.android.support:design:25.3.1'
     compile 'org.apache.directory.studio:org.apache.commons.io:2.4'
-    compile 'org.apache.commons:commons-lang3:3.4'
+    compile 'org.apache.commons:commons-lang3:3.5'
 }
