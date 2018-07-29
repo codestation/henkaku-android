@@ -1,8 +1,13 @@
-<resources>
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name">HENkaku Server</string>
-    <string name="message">You can now access the HENkaku Web Server from a PS Vita system connected to the same WiFi network.</string>
+    <string name="message">You can now access the HENkaku Web Server from a PS Vita system connected to this device Access Point.</string>
     <string name="dialog_exit_message">HENkaku Web Server is currently running. If you exit the application we will stop it. Are sure you want to exit the application?</string>
     <string name="warning">Warning</string>
-    <string name="wifi_message">You must connect to a WiFi network to use this service.</string>
+    <string name="wifi_message">You must enable the device Access Point to use this service.</string>
     <string name="agent_message">Visit this site from a PS Vita or PSTV running firmware version 3.60</string>
+    <string name="placeholder_address" tools:ignore="MissingTranslation">http://000.000.000.000:8080</string>
+    <string name="header" tools:ignore="MissingTranslation">Henkaku Android</string>
+    <string name="enable_access_point">Turn on Access Point</string>
+    <string name="default_host" tools:ignore="MissingTranslation">http://%s:%d</string>
 </resources>

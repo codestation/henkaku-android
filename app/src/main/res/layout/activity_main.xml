@@ -14,7 +14,8 @@
             android:layout_width="match_parent"
             android:layout_height="150dp"
             android:scaleType="centerCrop"
-            android:src="@drawable/header" />
+            android:src="@drawable/header"
+            android:contentDescription="@string/header" />
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -33,26 +34,7 @@
                     android:id="@+id/textViewIpAccess"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="http://000.000.000.000:"
-                    android:textColor="@android:color/white"
-                    android:textSize="20sp"
-                    android:textStyle="bold" />
-
-                <LinearLayout
-                    android:focusable="true"
-                    android:focusableInTouchMode="true"
-                    android:layout_width="0px"
-                    android:layout_height="0px"/>
-
-                <EditText
-                    android:id="@+id/editTextPort"
-                    android:layout_width="60dp"
-                    android:layout_height="wrap_content"
-                    android:gravity="center"
-                    android:hint="8080"
-                    android:inputType="numberDecimal"
-                    android:maxLength="4"
-                    android:text="8080"
+                    android:text="@string/placeholder_address"
                     android:textColor="@android:color/white"
                     android:textSize="20sp"
                     android:textStyle="bold" />
@@ -76,9 +58,19 @@
 
     </LinearLayout>
 
+    <TextView
+        android:id="@+id/versionText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="end|bottom"
+        android:layout_margin="16dp"
+        android:gravity="center_horizontal"
+        android:textColor="@android:color/white"
+        android:textStyle="bold" />
+
     <android.support.design.widget.FloatingActionButton
         android:id="@+id/floatingActionButtonOnOff"
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_gravity="end|bottom"
         android:layout_margin="16dp"

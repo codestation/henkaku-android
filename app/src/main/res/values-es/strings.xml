@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Servidor HENkaku </string>
+    <string name="message">Ya puede acceder al Servidor Web HENkaku desde un sistema PS Vita conectado al Punto de Acceso del dispositivo.</string>
     <string name="dialog_exit_message">El Servidor Web HENkaku esta ejecutandose. Al salir de la aplicación la detendremos. ¿Está seguro de salir de la aplicación?</string>
-    <string name="message">Ya puede acceder al Servidor Web HENkaku desde un sistema PS Vita conectado a la misma red WiFi.</string>
     <string name="warning">Precaución</string>
-    <string name="wifi_message">Debe conectarse a una red WiFi para utilizar este servicio.</string>
+    <string name="wifi_message">Debe habilitar el Punto de Acceso de este dispositivo para utilizar este servicio.</string>
     <string name="agent_message">Visite este sitio desde un sistema PS Vita o PSTV que ejecute el firmware versión 3.60</string>
+    <string name="enable_access_point">Turn on Access Point</string>
 </resources>

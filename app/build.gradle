@@ -1,29 +1,91 @@
 apply plugin: 'com.android.application'
+apply plugin: 'kotlin-android'
+apply plugin: 'kotlin-android-extensions'
+
+def getGitHash = { ->
+    def stdout = new ByteArrayOutputStream()
+    exec {
+        commandLine 'git', 'rev-parse',  '--short', 'HEAD'
+        standardOutput = stdout
+    }
+    return stdout.toString().trim()
+}
+
+def getVersionName = { ->
+    def stdout = new ByteArrayOutputStream()
+    exec {
+        commandLine 'git', 'describe', '--tags'
+        standardOutput = stdout
+    }
+    return stdout.toString().trim()
+}
 
 android {
-    compileSdkVersion 25
-    buildToolsVersion "25.0.3"
+    compileSdkVersion 27
+
+    def appVersion = System.env.DRONE_TAG ?: ""
+    def appCommitSha = System.env.COMMIT_SHA_SHORT
+    def isRunningOnDrone = System.getenv("CI") == "drone"
+
+    if(!isRunningOnDrone) {
+        appVersion = getVersionName()
+        appCommitSha = getGitHash()
+    }
+
+    def appVersionNameSuffix = appCommitSha ? " (${appCommitSha})" : ""
 
     defaultConfig {
         applicationId "com.codestation.henkakuserver"
-        minSdkVersion 10
-        targetSdkVersion 25
-        versionCode 10
-        versionName "1.9"
+        minSdkVersion 15
+        //noinspection OldTargetApi
+        targetSdkVersion 27
+        versionCode 11
+        versionName appVersion
+        versionNameSuffix appVersionNameSuffix
     }
+
+    signingConfigs {
+        release
+    }
+
+    if (isRunningOnDrone) {
+        signingConfigs.release.keyAlias System.getenv("ANDROID_KEYSTORE_ALIAS")
+        signingConfigs.release.keyPassword System.getenv("ANDROID_KEYSTORE_ALIAS_PASSWORD")
+        signingConfigs.release.storeFile file(System.getProperty("user.home") + "/.android/henkaku.keystore")
+        signingConfigs.release.storePassword System.getenv("ANDROID_KEYSTORE_PASSWORD")
+    } else {
+        Properties props = new Properties()
+        def propFile = new File('signing.properties')
+
+        if (propFile.canRead()) {
+            props.load(new FileInputStream(propFile))
+
+            signingConfigs.release.storeFile = file(props['STORE_FILE'])
+            signingConfigs.release.storePassword = props['STORE_PASSWORD']
+            signingConfigs.release.keyAlias = props['KEY_ALIAS']
+            signingConfigs.release.keyPassword = props['KEY_PASSWORD']
+        }
+    }
+
     buildTypes {
+        all {
+            buildConfigField "String", "defaultAddress", "\"192.168.43.1\""
+            buildConfigField "Integer", "defaultPort", "8080"
+        }
+
         release {
             minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            signingConfig signingConfigs.release
         }
     }
 }
 
 dependencies {
-    compile fileTree(include: ['*.jar'], dir: 'libs')
-    compile 'com.android.support:appcompat-v7:25.3.1'
-    compile 'org.nanohttpd:nanohttpd:2.3.1'
-    compile 'com.android.support:design:25.3.1'
-    compile 'org.apache.directory.studio:org.apache.commons.io:2.4'
-    compile 'org.apache.commons:commons-lang3:3.5'
+    implementation fileTree(include: ['*.jar'], dir: 'libs')
+    implementation 'com.android.support:appcompat-v7:27.1.1'
+    implementation 'org.nanohttpd:nanohttpd:2.3.1'
+    implementation 'com.android.support:design:27.1.1'
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
+    implementation 'com.android.support.constraint:constraint-layout:1.1.2'
 }
